@@ -175,6 +175,8 @@ export default function TodayPage() {
         <LoadingState />
       ) : error ? (
         <ErrorState onRetry={() => generate(weather, occasion)} message={error} />
+      ) : suggestions.length === 0 ? (
+        <NoOutfitState onRetry={() => generate(weather, occasion)} />
       ) : activeSuggestion ? (
         <>
           <SwipeArea
@@ -294,6 +296,35 @@ function ErrorState({ onRetry, message }: { onRetry: () => void; message: string
       <button onClick={onRetry} className="press mt-2 text-sm underline">
         Try again
       </button>
+    </div>
+  )
+}
+
+function NoOutfitState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+      <div>
+        <p className="font-semibold">No outfit could be built</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Make sure you have at least one top and one bottom (or a dress) that match the current season and occasion.
+        </p>
+      </div>
+      <div className="flex gap-3">
+        <button
+          onClick={onRetry}
+          className="press flex items-center gap-2 rounded-full bg-secondary px-5 py-2.5 text-sm font-medium"
+        >
+          <RefreshCw size={14} />
+          Try again
+        </button>
+        <Link
+          href="/wardrobe/add"
+          className="press flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background"
+        >
+          <Plus size={14} />
+          Add clothes
+        </Link>
+      </div>
     </div>
   )
 }
