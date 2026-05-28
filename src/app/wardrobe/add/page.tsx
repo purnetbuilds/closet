@@ -6,7 +6,7 @@ import { Camera, Upload, ChevronLeft, X, Loader2, Sparkles } from 'lucide-react'
 import { useWardrobe } from '@/hooks/useWardrobe'
 import type { Category, Season, Occasion } from '@/lib/db'
 import { CATEGORY_LABELS, OCCASION_LABELS } from '@/lib/outfit-utils'
-import { uploadImage } from '@/lib/supabase'
+import { uploadImage, isSupabaseConfigured } from '@/lib/supabase'
 import { extractDominantColors, nameForHex } from '@/lib/color-extract'
 import { toast } from '@/components/Toaster'
 import { cn } from '@/lib/utils'
@@ -108,7 +108,11 @@ export default function AddItemPage() {
       let imageUrl = ''
 
       if (pendingBlob) {
-        imageUrl = await uploadImage(pendingBlob, 'wardrobe', `${itemId}.jpg`)
+        if (isSupabaseConfigured()) {
+          imageUrl = await uploadImage(pendingBlob, 'wardrobe', `${itemId}.jpg`)
+        } else {
+          imageUrl = previewUrl
+        }
       }
 
       const activeHex = extracted.filter((c) => !excludedHex.has(c))
@@ -332,7 +336,7 @@ export default function AddItemPage() {
         className="press mt-2 flex items-center justify-center gap-2 rounded-xl bg-foreground py-3.5 text-sm font-semibold text-background disabled:opacity-40"
       >
         {saving && <Loader2 size={16} className="animate-spin" />}
-        {saving ? 'Uploading…' : 'Save to wardrobe'}
+        {saving ? 'Saving…' : 'Save to wardrobe'}
       </button>
     </div>
   )
