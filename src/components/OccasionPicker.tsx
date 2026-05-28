@@ -2,6 +2,7 @@
 
 import type { Occasion } from '@/lib/db'
 import { OCCASION_LABELS, OCCASION_EMOJIS } from '@/lib/outfit-utils'
+import { cn } from '@/lib/utils'
 
 const occasions: Occasion[] = ['work', 'casual', 'formal', 'date', 'gym']
 
@@ -19,13 +20,15 @@ export function OccasionPicker({ selected, onChange }: Props) {
           <button
             key={o}
             onClick={() => onChange(active ? null : o)}
-            className={`flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={cn(
+              'press-sm flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
               active
                 ? 'bg-foreground text-background'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-            }`}
+                : 'bg-secondary/70 text-secondary-foreground hover:bg-secondary'
+            )}
+            style={{ transitionTimingFunction: 'var(--ease-out-strong)' }}
           >
-            <span>{OCCASION_EMOJIS[o]}</span>
+            <span aria-hidden>{OCCASION_EMOJIS[o]}</span>
             <span>{OCCASION_LABELS[o]}</span>
           </button>
         )

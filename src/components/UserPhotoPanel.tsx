@@ -1,86 +1,115 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Camera, Upload, User, X, Loader2 } from 'lucide-react'
+import { Camera, User, Loader2 } from 'lucide-react'
 import { uploadProfilePhoto, getProfilePhotoUrl } from '@/lib/supabase'
+import { toast } from './Toaster'
+
+const PHOTO_CACHE_KEY = 'closet:profile-photo'
 
 interface Props {
-  /** Called when outfit items should be shown alongside this panel */
+  /** Outfit content rendered below the hero photo strip */
   children: React.ReactNode
 }
 
 export function UserPhotoPanel({ children }: Props) {
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem(PHOTO_CACHE_KEY)
+  })
+  const [loading, setLoading] = useState(!photoUrl)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    let cancelled = false
     getProfilePhotoUrl()
-      .then((url) => setPhotoUrl(url))
-      .finally(() => setLoading(false))
+      .then((url) => {
+        if (cancelled) return
+        if (url) {
+          setPhotoUrl(url)
+          try {
+            localStorage.setItem(PHOTO_CACHE_KEY, url)
+          } catch {}
+        } else {
+          setPhotoUrl(null)
+        }
+      })
+      .finally(() => !cancelled && setLoading(false))
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   async function handleFile(file: File) {
     setUploading(true)
     try {
       const url = await uploadProfilePhoto(file)
-      // bust cache
-      setPhotoUrl(url + '?t=' + Date.now())
+      const busted = url + '?t=' + Date.now()
+      setPhotoUrl(busted)
+      try {
+        localStorage.setItem(PHOTO_CACHE_KEY, busted)
+      } catch {}
+      toast.success('Photo updated')
     } catch {
-      alert('Photo upload failed. Check your Supabase config.')
+      toast.error('Upload failed — check Supabase config')
     } finally {
       setUploading(false)
     }
   }
 
   return (
-    <div className="flex gap-3">
-      {/* Left: user photo */}
-      <div className="flex shrink-0 flex-col items-center gap-1.5">
-        <div className="relative h-44 w-28 overflow-hidden rounded-2xl bg-secondary">
-          {loading ? (
+    <div className="flex flex-col gap-4">
+      {/* Compact avatar strip — keeps "you" anchored without dominating the canvas */}
+      <div className="flex items-center gap-3 rounded-2xl bg-background/60 px-3 py-2.5 backdrop-blur-sm">
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="press-sm relative size-14 shrink-0 overflow-hidden rounded-full bg-secondary"
+          aria-label={photoUrl ? 'Change profile photo' : 'Add profile photo'}
+        >
+          {loading && !photoUrl ? (
             <div className="flex h-full items-center justify-center">
-              <Loader2 size={20} className="animate-spin text-muted-foreground" />
+              <Loader2 size={16} className="animate-spin text-muted-foreground" />
             </div>
           ) : photoUrl ? (
             <>
-              <img src={photoUrl} alt="You" className="h-full w-full object-cover object-top" />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-1.5 right-1.5 rounded-full bg-background/80 p-1 shadow backdrop-blur-sm"
-                title="Change photo"
-              >
-                {uploading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
-              </button>
+              <img
+                src={photoUrl}
+                alt="You"
+                className="h-full w-full object-cover object-top"
+              />
+              <span className="absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-black/40 to-transparent pb-1 pt-2">
+                {uploading ? (
+                  <Loader2 size={11} className="animate-spin text-white" />
+                ) : (
+                  <Camera size={11} className="text-white" />
+                )}
+              </span>
             </>
           ) : (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground"
-            >
-              {uploading ? (
-                <Loader2 size={22} className="animate-spin" />
-              ) : (
-                <>
-                  <User size={28} />
-                  <span className="px-2 text-center text-[10px] leading-tight">Add your photo</span>
-                </>
-              )}
-            </button>
+            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+              {uploading ? <Loader2 size={18} className="animate-spin" /> : <User size={20} />}
+            </div>
           )}
-        </div>
-        <span className="text-[10px] text-muted-foreground">You</span>
+        </button>
 
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
-          onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
-        <input ref={cameraInputRef} type="file" accept="image/*" capture="user" className="hidden"
-          onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">Today&apos;s fit</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {photoUrl ? 'Tap photo to update' : 'Add a photo so your outfits feel personal'}
+          </p>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+        />
       </div>
 
-      {/* Right: outfit items */}
-      <div className="flex-1 min-w-0">{children}</div>
+      {children}
     </div>
   )
 }

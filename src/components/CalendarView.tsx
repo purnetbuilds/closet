@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, getDay } from 'date-fns'
 import { getWearLogs } from '@/lib/storage'
 import type { Outfit } from '@/lib/db'
+import { cn } from '@/lib/utils'
 
 interface Props {
   outfits: Outfit[]
@@ -29,20 +30,25 @@ export function CalendarView({ outfits, itemImageMap }: Props) {
       <div className="flex items-center justify-between">
         <button
           onClick={() => setCurrent((d) => new Date(d.getFullYear(), d.getMonth() - 1))}
-          className="rounded-full p-2 hover:bg-secondary"
+          className="press rounded-full p-2 hover:bg-secondary"
+          aria-label="Previous month"
         >
           <ChevronLeft size={18} />
         </button>
         <h2 className="text-base font-semibold">{format(current, 'MMMM yyyy')}</h2>
         <button
           onClick={() => setCurrent((d) => new Date(d.getFullYear(), d.getMonth() + 1))}
-          className="rounded-full p-2 hover:bg-secondary"
+          className="press rounded-full p-2 hover:bg-secondary"
+          aria-label="Next month"
         >
           <ChevronRight size={18} />
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
+      <div
+        key={format(current, 'yyyy-MM')}
+        className="cascade grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground"
+      >
         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
           <div key={d} className="py-1 font-medium">
             {d}
@@ -55,22 +61,30 @@ export function CalendarView({ outfits, itemImageMap }: Props) {
           const dateStr = format(day, 'yyyy-MM-dd')
           const hasLog = !!logsByDate[dateStr]
           const isSelected = selectedDate === dateStr
+          const today = isToday(day)
 
           return (
             <button
               key={dateStr}
               onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-              className={`flex flex-col items-center rounded-lg py-1.5 text-sm transition-colors ${
+              className={cn(
+                'press-sm flex flex-col items-center rounded-lg py-1.5 text-sm transition-colors',
                 isSelected
                   ? 'bg-foreground text-background'
-                  : isToday(day)
-                  ? 'bg-secondary font-semibold'
+                  : today
+                  ? 'bg-[var(--accent-warm-soft)] font-semibold text-foreground'
                   : 'hover:bg-secondary/50'
-              }`}
+              )}
+              style={{ transitionTimingFunction: 'var(--ease-out-strong)' }}
             >
               <span>{format(day, 'd')}</span>
               {hasLog && (
-                <span className={`mt-0.5 h-1.5 w-1.5 rounded-full ${isSelected ? 'bg-background' : 'bg-foreground'}`} />
+                <span
+                  className={cn(
+                    'mt-0.5 h-1.5 w-1.5 rounded-full',
+                    isSelected ? 'bg-background' : 'bg-foreground'
+                  )}
+                />
               )}
             </button>
           )

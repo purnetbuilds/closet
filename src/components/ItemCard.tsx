@@ -1,7 +1,8 @@
 'use client'
 
-import { Droplets } from 'lucide-react'
+import { Droplets, Shirt } from 'lucide-react'
 import type { ClothingItem } from '@/lib/db'
+import { cn } from '@/lib/utils'
 
 interface Props {
   item: ClothingItem
@@ -18,25 +19,33 @@ export function ItemCard({ item, onToggleLaundry, onClick, selected, size = 'md'
     lg: 'h-44 w-36',
   }
 
+  const colorChips = item.colors.slice(0, 3).filter((c) => c && c.startsWith('#'))
+
   return (
     <div
-      className={`relative flex flex-col gap-1 ${onClick ? 'cursor-pointer' : ''}`}
+      className={cn('relative flex flex-col gap-1', onClick && 'cursor-pointer')}
       onClick={onClick}
     >
       <div
-        className={`relative overflow-hidden rounded-xl bg-secondary ${sizeClasses[size]} ${
-          selected ? 'ring-2 ring-foreground' : ''
-        } ${item.laundryStatus === 'dirty' ? 'opacity-50' : ''}`}
+        className={cn(
+          'relative overflow-hidden rounded-xl bg-secondary transition-[box-shadow,transform] duration-200',
+          sizeClasses[size],
+          selected && 'ring-2 ring-foreground ring-offset-2 ring-offset-background',
+          item.laundryStatus === 'dirty' && 'opacity-50'
+        )}
+        style={{ transitionTimingFunction: 'var(--ease-out-strong)' }}
       >
         {item.imageUrl ? (
           <img
             src={item.imageUrl}
             alt={item.name}
             className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-3xl">
-            👗
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+            <Shirt size={28} strokeWidth={1.3} />
           </div>
         )}
 
@@ -52,7 +61,7 @@ export function ItemCard({ item, onToggleLaundry, onClick, selected, size = 'md'
               e.stopPropagation()
               onToggleLaundry()
             }}
-            className="absolute right-1 top-1 rounded-full bg-background/80 p-1 shadow-sm backdrop-blur-sm"
+            className="press-sm absolute right-1 top-1 rounded-full bg-background/80 p-1 shadow-sm backdrop-blur-sm"
             title={item.laundryStatus === 'clean' ? 'Mark dirty' : 'Mark clean'}
           >
             <Droplets
@@ -61,8 +70,22 @@ export function ItemCard({ item, onToggleLaundry, onClick, selected, size = 'md'
             />
           </button>
         )}
+
+        {colorChips.length > 0 && (
+          <div className="absolute bottom-1 left-1 flex -space-x-1">
+            {colorChips.map((c, i) => (
+              <span
+                key={i}
+                className="size-2.5 rounded-full ring-1 ring-background/80"
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+        )}
       </div>
-      <p className="max-w-[7rem] truncate text-center text-xs text-muted-foreground">{item.name}</p>
+      <p className="max-w-[7rem] truncate text-center text-xs text-muted-foreground">
+        {item.name}
+      </p>
     </div>
   )
 }

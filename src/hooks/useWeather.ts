@@ -8,6 +8,7 @@ export function useWeather() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     getWeatherByGeolocation()
       .then((data) => setWeather(data))

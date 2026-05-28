@@ -2,9 +2,11 @@
 
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Trash2, Droplets } from 'lucide-react'
+import { ChevronLeft, Trash2, Droplets, Shirt } from 'lucide-react'
 import { getClothingItem, saveClothingItem, deleteClothingItem, type ClothingItem, type Category, type Season, type Occasion } from '@/lib/db'
 import { CATEGORY_LABELS, OCCASION_LABELS } from '@/lib/outfit-utils'
+import { toast } from '@/components/Toaster'
+import { cn } from '@/lib/utils'
 
 const categories: Category[] = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'bag', 'accessory', 'other']
 const seasons: Season[] = ['spring', 'summer', 'fall', 'winter']
@@ -51,18 +53,40 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   async function handleDelete() {
-    if (!confirm('Remove this item from your wardrobe?')) return
-    await deleteClothingItem(item!.id)
-    router.push('/wardrobe')
+    if (!item) return
+    const snapshot = item
+    await deleteClothingItem(item.id)
+    let undone = false
+    toast.success(`${snapshot.name} removed`, {
+      action: {
+        label: 'Undo',
+        onClick: async () => {
+          undone = true
+          await saveClothingItem(snapshot)
+          setItem(snapshot)
+        },
+      },
+    })
+    window.setTimeout(() => {
+      if (!undone) router.push('/wardrobe')
+    }, 600)
   }
 
   return (
     <div className="flex flex-col gap-5 px-4 py-5">
       <div className="flex items-center justify-between">
-        <button onClick={() => router.back()} className="rounded-full p-1 hover:bg-secondary">
+        <button
+          onClick={() => router.back()}
+          className="press rounded-full p-1 hover:bg-secondary"
+          aria-label="Back"
+        >
           <ChevronLeft size={22} />
         </button>
-        <button onClick={handleDelete} className="rounded-full p-2 text-destructive hover:bg-destructive/10">
+        <button
+          onClick={handleDelete}
+          className="press rounded-full p-2 text-destructive hover:bg-destructive/10"
+          aria-label="Delete item"
+        >
           <Trash2 size={18} />
         </button>
       </div>
@@ -71,16 +95,34 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
         <div className="relative">
           <div className="h-52 w-44 overflow-hidden rounded-2xl bg-secondary shadow-md">
             {item.imageUrl ? (
-              <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+              <img
+                src={item.imageUrl}
+                alt={item.name}
+                className="h-full w-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-5xl">👗</div>
+              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                <Shirt size={48} strokeWidth={1.2} />
+              </div>
             )}
           </div>
           <button
-            onClick={() => setItem((prev) => prev && { ...prev, laundryStatus: prev.laundryStatus === 'clean' ? 'dirty' : 'clean' })}
-            className={`absolute bottom-2 right-2 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium shadow backdrop-blur-sm ${
-              item.laundryStatus === 'dirty' ? 'bg-blue-100 text-blue-700' : 'bg-background/80 text-muted-foreground'
-            }`}
+            onClick={() =>
+              setItem((prev) =>
+                prev && {
+                  ...prev,
+                  laundryStatus: prev.laundryStatus === 'clean' ? 'dirty' : 'clean',
+                }
+              )
+            }
+            className={cn(
+              'press-sm absolute bottom-2 right-2 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium shadow backdrop-blur-sm',
+              item.laundryStatus === 'dirty'
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                : 'bg-background/80 text-muted-foreground'
+            )}
           >
             <Droplets size={12} />
             {item.laundryStatus === 'dirty' ? 'Dirty' : 'Clean'}
@@ -105,9 +147,12 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               <button
                 key={c}
                 onClick={() => setItem((prev) => prev && { ...prev, category: c })}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                  item.category === c ? 'bg-foreground text-background' : 'bg-secondary text-secondary-foreground'
-                }`}
+                className={cn(
+                  'press-sm rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+                  item.category === c
+                    ? 'bg-foreground text-background'
+                    : 'bg-secondary text-secondary-foreground'
+                )}
               >
                 {CATEGORY_LABELS[c]}
               </button>
@@ -122,9 +167,12 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               <button
                 key={s}
                 onClick={() => toggleSeason(s)}
-                className={`flex-1 rounded-full py-1.5 text-sm font-medium capitalize transition-colors ${
-                  item.season.includes(s) ? 'bg-foreground text-background' : 'bg-secondary text-secondary-foreground'
-                }`}
+                className={cn(
+                  'press-sm flex-1 rounded-full py-1.5 text-sm font-medium capitalize transition-colors',
+                  item.season.includes(s)
+                    ? 'bg-foreground text-background'
+                    : 'bg-secondary text-secondary-foreground'
+                )}
               >
                 {s}
               </button>
@@ -139,9 +187,12 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               <button
                 key={o}
                 onClick={() => toggleOccasion(o)}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                  item.occasions.includes(o) ? 'bg-foreground text-background' : 'bg-secondary text-secondary-foreground'
-                }`}
+                className={cn(
+                  'press-sm rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+                  item.occasions.includes(o)
+                    ? 'bg-foreground text-background'
+                    : 'bg-secondary text-secondary-foreground'
+                )}
               >
                 {OCCASION_LABELS[o]}
               </button>
@@ -166,9 +217,9 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
       <button
         onClick={handleSave}
         disabled={saving}
-        className="mt-2 rounded-xl bg-foreground py-3.5 text-sm font-semibold text-background disabled:opacity-40"
+        className="press mt-2 rounded-xl bg-foreground py-3.5 text-sm font-semibold text-background disabled:opacity-40"
       >
-        {saving ? 'Saving...' : 'Save changes'}
+        {saving ? 'Saving…' : 'Save changes'}
       </button>
     </div>
   )

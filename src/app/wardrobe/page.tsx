@@ -16,10 +16,10 @@ export default function WardrobePage() {
   return (
     <div className="flex flex-col gap-5 px-4 py-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Wardrobe</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Wardrobe</h1>
         <Link
           href="/wardrobe/add"
-          className="flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background"
+          className="press flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background"
         >
           <Plus size={16} />
           Add
@@ -38,7 +38,7 @@ export default function WardrobePage() {
       {loading ? (
         <div className="grid grid-cols-3 gap-3">
           {Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="mx-auto h-32 w-28 animate-pulse rounded-xl bg-secondary" />
+            <div key={i} className="shimmer mx-auto h-32 w-28 rounded-xl" />
           ))}
         </div>
       ) : (

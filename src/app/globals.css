@@ -117,6 +117,30 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+:root {
+  /* Strong custom eases — defaults are too weak */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Accent — single warm hue used sparingly for lock highlights, today tile, etc. */
+  --accent-warm: oklch(0.72 0.12 70);
+  --accent-warm-soft: oklch(0.94 0.04 80);
+
+  /* Weather gradient — set by Today screen on the html or body */
+  --weather-from: oklch(0.99 0.01 95);
+  --weather-via: oklch(0.97 0.02 90);
+  --weather-to: oklch(0.99 0.005 80);
+}
+
+.dark {
+  --accent-warm: oklch(0.78 0.14 75);
+  --accent-warm-soft: oklch(0.32 0.05 75);
+  --weather-from: oklch(0.18 0.01 250);
+  --weather-via: oklch(0.16 0.015 260);
+  --weather-to: oklch(0.14 0.005 270);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -147,4 +171,72 @@
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/* Press feedback — instant transform feedback on any tappable element */
+.press {
+  transition: transform 160ms var(--ease-out-strong);
+  transform-origin: center;
+  will-change: transform;
+}
+.press:active {
+  transform: scale(0.97);
+}
+.press-sm {
+  transition: transform 140ms var(--ease-out-strong);
+}
+.press-sm:active {
+  transform: scale(0.94);
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+.shimmer {
+  background-image: linear-gradient(
+    100deg,
+    var(--secondary) 30%,
+    color-mix(in oklch, var(--secondary) 60%, var(--background)) 50%,
+    var(--secondary) 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* Weather-driven background — applied to Today main */
+.weather-bg {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 0%, var(--weather-from) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 100% 30%, var(--weather-via) 0%, transparent 55%),
+    var(--weather-to);
+  transition: background 600ms var(--ease-out-strong);
+}
+
+/* Slide-in cascade for staggered list entry */
+@keyframes slide-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.cascade > * {
+  animation: slide-in-up 360ms var(--ease-out-strong) backwards;
+}
+.cascade > *:nth-child(1) { animation-delay: 0ms; }
+.cascade > *:nth-child(2) { animation-delay: 40ms; }
+.cascade > *:nth-child(3) { animation-delay: 80ms; }
+.cascade > *:nth-child(4) { animation-delay: 120ms; }
+.cascade > *:nth-child(5) { animation-delay: 160ms; }
+.cascade > *:nth-child(6) { animation-delay: 200ms; }
+.cascade > *:nth-child(7) { animation-delay: 240ms; }
+.cascade > *:nth-child(8) { animation-delay: 280ms; }
+.cascade > *:nth-child(9) { animation-delay: 320ms; }
+.cascade > *:nth-child(n+10) { animation-delay: 360ms; }
+
+/* Reduced motion override */
+@media (prefers-reduced-motion: reduce) {
+  .press:active { transform: none; }
+  .cascade > * { animation: none; }
+  .shimmer { animation: none; }
+  .weather-bg { transition: none; }
 }

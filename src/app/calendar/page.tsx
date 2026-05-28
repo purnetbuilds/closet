@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getAllOutfits, getAllClothing, type Outfit, type ClothingItem } from '@/lib/db'
+import { getAllOutfits, getAllClothing, type Outfit } from '@/lib/db'
 import { CalendarView } from '@/components/CalendarView'
 
 export default function CalendarPage() {
@@ -11,7 +11,10 @@ export default function CalendarPage() {
 
   useEffect(() => {
     async function load() {
-      const [allOutfits, allItems] = await Promise.all([getAllOutfits(), getAllClothing()])
+      const [allOutfits, allItems] = await Promise.all([
+        getAllOutfits(),
+        getAllClothing(),
+      ])
       setOutfits(allOutfits)
       setItemImageMap(Object.fromEntries(allItems.map((i) => [i.id, i.imageUrl])))
       setLoading(false)
@@ -21,9 +24,9 @@ export default function CalendarPage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 py-5">
-      <h1 className="text-xl font-semibold">Wear History</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">History</h1>
       {loading ? (
-        <div className="h-64 animate-pulse rounded-2xl bg-secondary" />
+        <div className="shimmer h-64 rounded-2xl" />
       ) : (
         <CalendarView outfits={outfits} itemImageMap={itemImageMap} />
       )}

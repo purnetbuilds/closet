@@ -2,11 +2,14 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, Upload, ChevronLeft, X, Loader2 } from 'lucide-react'
+import { Camera, Upload, ChevronLeft, X, Loader2, Sparkles } from 'lucide-react'
 import { useWardrobe } from '@/hooks/useWardrobe'
 import type { Category, Season, Occasion } from '@/lib/db'
 import { CATEGORY_LABELS, OCCASION_LABELS } from '@/lib/outfit-utils'
 import { uploadImage } from '@/lib/supabase'
+import { extractDominantColors, nameForHex } from '@/lib/color-extract'
+import { toast } from '@/components/Toaster'
+import { cn } from '@/lib/utils'
 
 const seasons: Season[] = ['spring', 'summer', 'fall', 'winter']
 const categories: Category[] = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'bag', 'accessory', 'other']
@@ -25,7 +28,10 @@ function compressToBlob(file: File, maxWidth = 800): Promise<{ blob: Blob; previ
       URL.revokeObjectURL(url)
       canvas.toBlob(
         (blob) => {
-          if (!blob) { reject(new Error('Compression failed')); return }
+          if (!blob) {
+            reject(new Error('Compression failed'))
+            return
+          }
           resolve({ blob, previewUrl: canvas.toDataURL('image/jpeg', 0.8) })
         },
         'image/jpeg',
@@ -50,7 +56,9 @@ export default function AddItemPage() {
   const [category, setCategory] = useState<Category>('top')
   const [selectedSeasons, setSelectedSeasons] = useState<Season[]>([])
   const [selectedOccasions, setSelectedOccasions] = useState<Occasion[]>([])
-  const [colors, setColors] = useState('')
+  const [extracted, setExtracted] = useState<string[]>([])
+  const [excludedHex, setExcludedHex] = useState<Set<string>>(new Set())
+  const [extracting, setExtracting] = useState(false)
   const [saving, setSaving] = useState(false)
 
   async function handleFile(file: File) {
@@ -59,17 +67,37 @@ export default function AddItemPage() {
       const { blob, previewUrl } = await compressToBlob(file)
       setPreviewUrl(previewUrl)
       setPendingBlob(blob)
+
+      setExtracting(true)
+      try {
+        const colors = await extractDominantColors(blob, 4)
+        setExtracted(colors)
+        setExcludedHex(new Set())
+      } catch {
+        setExtracted([])
+      } finally {
+        setExtracting(false)
+      }
     } finally {
       setUploading(false)
     }
   }
 
   function toggleSeason(s: Season) {
-    setSelectedSeasons((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s])
+    setSelectedSeasons((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   }
 
   function toggleOccasion(o: Occasion) {
-    setSelectedOccasions((prev) => prev.includes(o) ? prev.filter((x) => x !== o) : [...prev, o])
+    setSelectedOccasions((prev) => (prev.includes(o) ? prev.filter((x) => x !== o) : [...prev, o]))
+  }
+
+  function toggleExcluded(hex: string) {
+    setExcludedHex((prev) => {
+      const next = new Set(prev)
+      if (next.has(hex)) next.delete(hex)
+      else next.add(hex)
+      return next
+    })
   }
 
   async function handleSave() {
@@ -83,12 +111,20 @@ export default function AddItemPage() {
         imageUrl = await uploadImage(pendingBlob, 'wardrobe', `${itemId}.jpg`)
       }
 
+      const activeHex = extracted.filter((c) => !excludedHex.has(c))
+      const colorList = [
+        ...activeHex.map((hex) => hex),
+        ...activeHex.map((hex) => nameForHex(hex)),
+      ]
+      // Dedupe while preserving order
+      const colors = Array.from(new Set(colorList))
+
       await addItem({
         id: itemId,
         name: name.trim(),
         category,
         imageUrl,
-        colors: colors.split(',').map((c) => c.trim()).filter(Boolean),
+        colors,
         season: selectedSeasons,
         occasions: selectedOccasions,
         tags: [],
@@ -96,9 +132,10 @@ export default function AddItemPage() {
         wearCount: 0,
         addedAt: new Date().toISOString(),
       })
+      toast.success(`${name.trim()} added to your wardrobe`)
       router.push('/wardrobe')
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Upload failed. Check your Supabase config.')
+      toast.error(e instanceof Error ? e.message : 'Upload failed — check Supabase config')
       setSaving(false)
     }
   }
@@ -108,19 +145,33 @@ export default function AddItemPage() {
   return (
     <div className="flex flex-col gap-5 px-4 py-5">
       <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="rounded-full p-1 hover:bg-secondary">
+        <button
+          onClick={() => router.back()}
+          className="press rounded-full p-1 hover:bg-secondary"
+          aria-label="Back"
+        >
           <ChevronLeft size={22} />
         </button>
-        <h1 className="text-xl font-semibold">Add item</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Add item</h1>
       </div>
 
       <div className="flex flex-col items-center gap-3">
         {previewUrl ? (
           <div className="relative">
-            <img src={previewUrl} alt="Preview" className="h-48 w-40 rounded-2xl object-cover shadow-md" />
+            <img
+              src={previewUrl}
+              alt="Preview"
+              className="h-48 w-40 rounded-2xl object-cover shadow-md"
+            />
             <button
-              onClick={() => { setPreviewUrl(''); setPendingBlob(null) }}
-              className="absolute right-2 top-2 rounded-full bg-background/80 p-1 shadow backdrop-blur-sm"
+              onClick={() => {
+                setPreviewUrl('')
+                setPendingBlob(null)
+                setExtracted([])
+                setExcludedHex(new Set())
+              }}
+              className="press-sm absolute right-2 top-2 rounded-full bg-background/80 p-1 shadow backdrop-blur-sm"
+              aria-label="Remove photo"
             >
               <X size={14} />
             </button>
@@ -133,14 +184,14 @@ export default function AddItemPage() {
               <>
                 <button
                   onClick={() => cameraInputRef.current?.click()}
-                  className="flex flex-col items-center gap-1 text-muted-foreground"
+                  className="press flex flex-col items-center gap-1 text-muted-foreground"
                 >
                   <Camera size={28} />
                   <span className="text-xs">Camera</span>
                 </button>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center gap-1 text-muted-foreground"
+                  className="press flex flex-col items-center gap-1 text-muted-foreground"
                 >
                   <Upload size={20} />
                   <span className="text-xs">Upload</span>
@@ -149,26 +200,85 @@ export default function AddItemPage() {
             )}
           </div>
         )}
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
-          onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
-        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden"
-          onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+        />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+        />
       </div>
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)}
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             placeholder="e.g. White linen shirt"
-            className="rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-foreground/20" />
+            className="rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition-shadow focus:ring-2 focus:ring-foreground/20"
+          />
         </div>
+
+        {/* Extracted color chips */}
+        {(extracting || extracted.length > 0) && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-1.5 text-sm font-medium">
+              <Sparkles size={13} className="text-[var(--accent-warm)]" />
+              <span>Detected colors</span>
+              {extracting && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {extracted.map((hex) => {
+                const excluded = excludedHex.has(hex)
+                return (
+                  <button
+                    key={hex}
+                    onClick={() => toggleExcluded(hex)}
+                    className={cn(
+                      'press-sm flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs transition-[opacity,border-color] duration-200',
+                      excluded
+                        ? 'border-border bg-secondary/30 opacity-50 line-through'
+                        : 'border-foreground/20 bg-secondary/60'
+                    )}
+                  >
+                    <span
+                      className="size-3 rounded-full ring-1 ring-background/60"
+                      style={{ backgroundColor: hex }}
+                    />
+                    <span>{nameForHex(hex)}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Tap a chip to exclude it (e.g., background or trim color)
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium">Category</label>
           <div className="flex flex-wrap gap-2">
             {categories.map((c) => (
-              <button key={c} onClick={() => setCategory(c)}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${category === c ? 'bg-foreground text-background' : 'bg-secondary text-secondary-foreground'}`}>
+              <button
+                key={c}
+                onClick={() => setCategory(c)}
+                className={cn(
+                  'press-sm rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+                  category === c
+                    ? 'bg-foreground text-background'
+                    : 'bg-secondary text-secondary-foreground'
+                )}
+              >
                 {CATEGORY_LABELS[c]}
               </button>
             ))}
@@ -179,8 +289,16 @@ export default function AddItemPage() {
           <label className="text-sm font-medium">Season</label>
           <div className="flex gap-2">
             {seasons.map((s) => (
-              <button key={s} onClick={() => toggleSeason(s)}
-                className={`flex-1 rounded-full py-1.5 text-sm font-medium capitalize transition-colors ${selectedSeasons.includes(s) ? 'bg-foreground text-background' : 'bg-secondary text-secondary-foreground'}`}>
+              <button
+                key={s}
+                onClick={() => toggleSeason(s)}
+                className={cn(
+                  'press-sm flex-1 rounded-full py-1.5 text-sm font-medium capitalize transition-colors',
+                  selectedSeasons.includes(s)
+                    ? 'bg-foreground text-background'
+                    : 'bg-secondary text-secondary-foreground'
+                )}
+              >
                 {s}
               </button>
             ))}
@@ -191,28 +309,30 @@ export default function AddItemPage() {
           <label className="text-sm font-medium">Occasion</label>
           <div className="flex flex-wrap gap-2">
             {occasions.map((o) => (
-              <button key={o} onClick={() => toggleOccasion(o)}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${selectedOccasions.includes(o) ? 'bg-foreground text-background' : 'bg-secondary text-secondary-foreground'}`}>
+              <button
+                key={o}
+                onClick={() => toggleOccasion(o)}
+                className={cn(
+                  'press-sm rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+                  selectedOccasions.includes(o)
+                    ? 'bg-foreground text-background'
+                    : 'bg-secondary text-secondary-foreground'
+                )}
+              >
                 {OCCASION_LABELS[o]}
               </button>
             ))}
           </div>
         </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">
-            Colors <span className="font-normal text-muted-foreground">(comma separated)</span>
-          </label>
-          <input value={colors} onChange={(e) => setColors(e.target.value)}
-            placeholder="e.g. white, cream"
-            className="rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-foreground/20" />
-        </div>
       </div>
 
-      <button onClick={handleSave} disabled={!canSave || saving}
-        className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-foreground py-3.5 text-sm font-semibold text-background disabled:opacity-40">
+      <button
+        onClick={handleSave}
+        disabled={!canSave || saving}
+        className="press mt-2 flex items-center justify-center gap-2 rounded-xl bg-foreground py-3.5 text-sm font-semibold text-background disabled:opacity-40"
+      >
         {saving && <Loader2 size={16} className="animate-spin" />}
-        {saving ? 'Uploading...' : 'Save to wardrobe'}
+        {saving ? 'Uploading…' : 'Save to wardrobe'}
       </button>
     </div>
   )

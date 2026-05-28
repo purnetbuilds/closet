@@ -8,6 +8,8 @@ import { WardrobeGrid } from '@/components/WardrobeGrid'
 import { generateCapsulePlan } from '@/lib/outfit-generator'
 import { OCCASION_LABELS, getCurrentSeason } from '@/lib/outfit-utils'
 import { format, addDays, parseISO } from 'date-fns'
+import { cn } from '@/lib/utils'
+import { toast } from '@/components/Toaster'
 
 const occasions: Occasion[] = ['work', 'casual', 'formal', 'date', 'gym']
 
@@ -24,9 +26,11 @@ export default function NewCapsulePage() {
 
   useEffect(() => {
     getAllClothing().then(setAllItems)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStartDate(format(new Date(), 'yyyy-MM-dd'))
   }, [])
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setDayOccasions((prev) => {
       const next = [...prev]
@@ -34,6 +38,7 @@ export default function NewCapsulePage() {
       return next.slice(0, numDays)
     })
   }, [numDays])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function toggleItem(id: string) {
     setSelectedIds((prev) => {
@@ -77,6 +82,7 @@ export default function NewCapsulePage() {
       generatedPlan: plan,
     })
     setSaving(false)
+    toast.success(`${name.trim()} capsule packed`)
     router.push('/capsules')
   }
 
@@ -85,10 +91,14 @@ export default function NewCapsulePage() {
   return (
     <div className="flex flex-col gap-5 px-4 py-5">
       <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="rounded-full p-1 hover:bg-secondary">
+        <button
+          onClick={() => router.back()}
+          className="press rounded-full p-1 hover:bg-secondary"
+          aria-label="Back"
+        >
           <ChevronLeft size={22} />
         </button>
-        <h1 className="text-xl font-semibold">New Capsule</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">New Capsule</h1>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -115,11 +125,19 @@ export default function NewCapsulePage() {
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">Days</label>
             <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2.5">
-              <button onClick={() => setNumDays((n) => Math.max(1, n - 1))} className="text-muted-foreground">
+              <button
+                onClick={() => setNumDays((n) => Math.max(1, n - 1))}
+                className="press-sm text-muted-foreground"
+                aria-label="Fewer days"
+              >
                 <Minus size={16} />
               </button>
               <span className="w-6 text-center text-sm font-medium">{numDays}</span>
-              <button onClick={() => setNumDays((n) => Math.min(14, n + 1))} className="text-muted-foreground">
+              <button
+                onClick={() => setNumDays((n) => Math.min(14, n + 1))}
+                className="press-sm text-muted-foreground"
+                aria-label="More days"
+              >
                 <Plus size={16} />
               </button>
             </div>
@@ -139,9 +157,12 @@ export default function NewCapsulePage() {
                     <button
                       key={o}
                       onClick={() => setDayOccasion(i, o)}
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                        dayOccasions[i] === o ? 'bg-foreground text-background' : 'bg-secondary text-secondary-foreground'
-                      }`}
+                      className={cn(
+                        'press-sm shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+                        dayOccasions[i] === o
+                          ? 'bg-foreground text-background'
+                          : 'bg-secondary text-secondary-foreground'
+                      )}
                     >
                       {OCCASION_LABELS[o]}
                     </button>
@@ -169,15 +190,15 @@ export default function NewCapsulePage() {
       <button
         onClick={handleGenerateAndSave}
         disabled={!canSave || generating || saving}
-        className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-foreground py-3.5 text-sm font-semibold text-background disabled:opacity-40"
+        className="press mt-2 flex items-center justify-center gap-2 rounded-xl bg-foreground py-3.5 text-sm font-semibold text-background disabled:opacity-40"
       >
         {generating ? (
           <>
             <Sparkles size={16} className="animate-spin" />
-            Planning outfits...
+            Planning outfits…
           </>
         ) : saving ? (
-          'Saving...'
+          'Saving…'
         ) : (
           <>
             <Sparkles size={16} />
