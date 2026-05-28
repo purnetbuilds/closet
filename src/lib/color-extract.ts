@@ -48,6 +48,7 @@ export async function extractDominantColors(
   return new Promise((resolve) => {
     const img = new Image()
     img.crossOrigin = 'anonymous'
+    let objectUrl: string | null = null
 
     img.onload = () => {
       try {
@@ -108,15 +109,21 @@ export async function extractDominantColors(
         resolve(picks)
       } catch {
         resolve([])
+      } finally {
+        if (objectUrl) URL.revokeObjectURL(objectUrl)
       }
     }
 
-    img.onerror = () => resolve([])
+    img.onerror = () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+      resolve([])
+    }
 
     if (typeof source === 'string') {
       img.src = source
     } else {
-      img.src = URL.createObjectURL(source)
+      objectUrl = URL.createObjectURL(source)
+      img.src = objectUrl
     }
   })
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -25,14 +25,26 @@ export function SwipeArea({
   const startX = useRef(0)
   const startTime = useRef(0)
   const pointerIdRef = useRef<number | null>(null)
+  const resolveTimer = useRef<number | null>(null)
   const [dx, setDx] = useState(0)
   const [phase, setPhase] = useState<'idle' | 'dragging' | 'resolving'>('idle')
+
+  // Clear a pending resolve animation if we unmount mid-swipe.
+  useEffect(() => {
+    return () => {
+      if (resolveTimer.current) window.clearTimeout(resolveTimer.current)
+    }
+  }, [])
 
   function onPointerDown(e: React.PointerEvent) {
     if (pointerIdRef.current !== null) return
     pointerIdRef.current = e.pointerId
     startX.current = e.clientX
     startTime.current = Date.now()
+    // Capture so a drag that leaves the element (e.g. with a mouse) still tracks.
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {}
     setPhase('dragging')
   }
 
@@ -58,7 +70,7 @@ export function SwipeArea({
     if ((flicked || traveled) && distance < 0 && onSwipeLeft) {
       setPhase('resolving')
       setDx(-window.innerWidth * 0.4)
-      window.setTimeout(() => {
+      resolveTimer.current = window.setTimeout(() => {
         onSwipeLeft()
         setDx(0)
         setPhase('idle')
@@ -66,7 +78,7 @@ export function SwipeArea({
     } else if ((flicked || traveled) && distance > 0 && onSwipeRight) {
       setPhase('resolving')
       setDx(window.innerWidth * 0.4)
-      window.setTimeout(() => {
+      resolveTimer.current = window.setTimeout(() => {
         onSwipeRight()
         setDx(0)
         setPhase('idle')

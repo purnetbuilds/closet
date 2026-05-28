@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -28,9 +28,29 @@ export function HoldButton({
 }: Props) {
   const startRef = useRef<number | null>(null)
   const rafRef = useRef<number | null>(null)
+  const timeoutsRef = useRef<Set<number>>(new Set())
   const [progress, setProgress] = useState(0) // 0..1
   const [releasing, setReleasing] = useState(false)
   const confirmedRef = useRef(false)
+
+  // Wrapper that remembers timeouts so we can clear them on unmount.
+  function later(fn: () => void, ms: number) {
+    const id = window.setTimeout(() => {
+      timeoutsRef.current.delete(id)
+      fn()
+    }, ms)
+    timeoutsRef.current.add(id)
+  }
+
+  // Cancel any in-flight animation frame / timers if we unmount mid-hold.
+  useEffect(() => {
+    const timeouts = timeoutsRef.current
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      timeouts.forEach((id) => window.clearTimeout(id))
+      timeouts.clear()
+    }
+  }, [])
 
   function tick(now: number) {
     if (startRef.current === null) return
@@ -45,10 +65,10 @@ export function HoldButton({
         } catch {}
         onConfirm()
         // hold full state briefly then drop
-        window.setTimeout(() => {
+        later(() => {
           setReleasing(true)
           setProgress(0)
-          window.setTimeout(() => {
+          later(() => {
             setReleasing(false)
             confirmedRef.current = false
           }, 200)
@@ -59,8 +79,12 @@ export function HoldButton({
     rafRef.current = requestAnimationFrame(tick)
   }
 
-  function start() {
+  function start(e: React.PointerEvent) {
     if (disabled || confirmedRef.current) return
+    // Capture the pointer so the hold keeps tracking even if the finger drifts.
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {}
     startRef.current = performance.now()
     setReleasing(false)
     rafRef.current = requestAnimationFrame(tick)
@@ -73,7 +97,7 @@ export function HoldButton({
     if (confirmedRef.current) return
     setReleasing(true)
     setProgress(0)
-    window.setTimeout(() => setReleasing(false), 200)
+    later(() => setReleasing(false), 200)
   }
 
   // clip-path inset eats from the right; we shrink it to reveal the fill left-to-right

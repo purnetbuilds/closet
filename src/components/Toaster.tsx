@@ -68,7 +68,20 @@ export function Toaster() {
 
   useEffect(() => {
     const listener: Listener = (t) => {
-      setToasts((prev) => [...prev.slice(-2), t])
+      setToasts((prev) => {
+        // Keep at most 3 toasts; clear timers for any we drop so they don't
+        // fire a stray dismiss after they've already left the screen.
+        const next = [...prev, t]
+        const dropped = next.slice(0, Math.max(0, next.length - 3))
+        dropped.forEach((d) => {
+          const entry = timers.current.get(d.id)
+          if (entry) {
+            window.clearTimeout(entry.timeoutId)
+            timers.current.delete(d.id)
+          }
+        })
+        return next.slice(-3)
+      })
       schedule(t.id, t.duration)
     }
     listeners.add(listener)
@@ -76,6 +89,15 @@ export function Toaster() {
       listeners.delete(listener)
     }
   }, [schedule])
+
+  // Clear every pending timer when the Toaster unmounts.
+  useEffect(() => {
+    const map = timers.current
+    return () => {
+      map.forEach((entry) => window.clearTimeout(entry.timeoutId))
+      map.clear()
+    }
+  }, [])
 
   // Pause timers when tab is hidden — Sonner principle
   useEffect(() => {
@@ -96,11 +118,13 @@ export function Toaster() {
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [schedule])
 
-  if (toasts.length === 0) return null
-
+  // The live region stays mounted even when empty so screen readers reliably
+  // announce toasts as they're inserted (a region added alongside its content
+  // is often missed). It's pointer-events-none, so it never blocks taps.
   return (
     <div
       aria-live="polite"
+      role="status"
       className="pointer-events-none fixed inset-x-0 bottom-20 z-[60] flex flex-col items-center gap-2 px-4"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >

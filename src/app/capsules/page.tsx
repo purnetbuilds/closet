@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Plus, Trash2, Briefcase, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -12,6 +12,10 @@ import {
 } from '@/lib/db'
 import { toast } from '@/components/Toaster'
 import { cn } from '@/lib/utils'
+
+// How long a deleted capsule can be restored before the delete is committed.
+// The toast stays visible for the same window so Undo never disappears early.
+const UNDO_WINDOW_MS = 5000
 
 function CapsuleCard({
   capsule,
@@ -171,19 +175,51 @@ export default function CapsulesPage() {
     setLoading(false)
   }
 
+  // Deletes that are still inside their undo window. Keyed by capsule id so we
+  // can commit them immediately if the page unmounts or the tab closes —
+  // otherwise a quick navigation would lose the delete and the capsule returns.
+  const pendingDeletes = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
   }, [])
 
-  async function handleDelete(capsule: Capsule) {
+  useEffect(() => {
+    const pending = pendingDeletes.current
+    const flush = () => {
+      pending.forEach((timer, id) => {
+        clearTimeout(timer)
+        void deleteCapsule(id)
+      })
+      pending.clear()
+    }
+    window.addEventListener('beforeunload', flush)
+    return () => {
+      window.removeEventListener('beforeunload', flush)
+      flush()
+    }
+  }, [])
+
+  function handleDelete(capsule: Capsule) {
     setCapsules((prev) => prev.filter((c) => c.id !== capsule.id))
-    let undone = false
+
+    const timer = setTimeout(() => {
+      pendingDeletes.current.delete(capsule.id)
+      void deleteCapsule(capsule.id)
+    }, UNDO_WINDOW_MS)
+    pendingDeletes.current.set(capsule.id, timer)
+
     toast.success('Capsule deleted', {
+      duration: UNDO_WINDOW_MS,
       action: {
         label: 'Undo',
         onClick: () => {
-          undone = true
+          const pending = pendingDeletes.current.get(capsule.id)
+          if (pending) {
+            clearTimeout(pending)
+            pendingDeletes.current.delete(capsule.id)
+          }
           setCapsules((prev) =>
             [capsule, ...prev].sort(
               (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -192,10 +228,6 @@ export default function CapsulesPage() {
         },
       },
     })
-    window.setTimeout(async () => {
-      if (undone) return
-      await deleteCapsule(capsule.id)
-    }, 3600)
   }
 
   return (
