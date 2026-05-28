@@ -145,7 +145,7 @@ export default function TodayPage() {
 
   return (
     <div
-      className="weather-bg flex min-h-screen flex-col gap-5 px-4 py-5"
+      className="weather-bg flex h-dvh flex-col gap-5 overflow-hidden px-4 py-5"
       style={
         {
           '--weather-from': theme.light.from,
@@ -300,7 +300,7 @@ function ErrorState({ onRetry, message }: { onRetry: () => void; message: string
 
 function EmptyWardrobe() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
       <div>
         <p className="font-semibold">Your wardrobe is empty</p>
         <p className="mt-1 text-sm text-muted-foreground">
