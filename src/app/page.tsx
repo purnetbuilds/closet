@@ -301,9 +301,6 @@ function ErrorState({ onRetry, message }: { onRetry: () => void; message: string
 function EmptyWardrobe() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
-      <div className="flex size-20 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-        <Plus size={32} strokeWidth={1.5} />
-      </div>
       <div>
         <p className="font-semibold">Your wardrobe is empty</p>
         <p className="mt-1 text-sm text-muted-foreground">
