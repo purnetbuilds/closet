@@ -51,8 +51,8 @@ export function UserPhotoPanel({ children }: Props) {
         localStorage.setItem(PHOTO_CACHE_KEY, busted)
       } catch {}
       toast.success('Photo updated')
-    } catch {
-      toast.error('Upload failed — check Supabase config')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Couldn’t update your photo. Please try again.')
     } finally {
       setUploading(false)
     }

@@ -139,7 +139,7 @@ export default function AddItemPage() {
       toast.success(`${name.trim()} added to your wardrobe`)
       router.push('/wardrobe')
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Upload failed — check Supabase config')
+      toast.error(e instanceof Error ? e.message : 'Couldn’t save the item. Please try again.')
       setSaving(false)
     }
   }

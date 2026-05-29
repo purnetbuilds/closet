@@ -31,6 +31,28 @@ function getUserFolder(): string {
   return id
 }
 
+/**
+ * Turn a raw Supabase storage error into something a user can act on.
+ * Raw messages like "Bucket not found" or RLS violations are opaque, so we
+ * map the ones we expect and fall back to a generic-but-honest message.
+ */
+function describeUploadError(rawMessage: string, bucket: string): string {
+  const msg = rawMessage.toLowerCase()
+  if (msg.includes('bucket not found')) {
+    return `Photo storage isn’t set up yet — the “${bucket}” bucket is missing in Supabase.`
+  }
+  if (msg.includes('row-level security') || msg.includes('violates') || msg.includes('unauthorized')) {
+    return 'Photo upload isn’t permitted — check the storage policies in Supabase.'
+  }
+  if (msg.includes('exceeded') || msg.includes('too large') || msg.includes('payload')) {
+    return 'That image is too large to upload.'
+  }
+  if (msg.includes('fetch') || msg.includes('network')) {
+    return 'Couldn’t reach photo storage — check your connection and try again.'
+  }
+  return 'Couldn’t save the photo. Please try again.'
+}
+
 export async function uploadImage(
   file: File | Blob,
   bucket: 'wardrobe' | 'profile',
@@ -40,11 +62,17 @@ export async function uploadImage(
   const folder = getUserFolder()
   const path = `${folder}/${filename}`
 
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
-    upsert: true,
-    contentType: 'image/jpeg',
-  })
-  if (error) throw new Error(error.message)
+  let error
+  try {
+    ;({ error } = await supabase.storage.from(bucket).upload(path, file, {
+      upsert: true,
+      contentType: 'image/jpeg',
+    }))
+  } catch (e) {
+    // Network/transport failures reject instead of returning an error object.
+    throw new Error(describeUploadError(e instanceof Error ? e.message : '', bucket))
+  }
+  if (error) throw new Error(describeUploadError(error.message, bucket))
 
   const { data } = supabase.storage.from(bucket).getPublicUrl(path)
   return data.publicUrl
