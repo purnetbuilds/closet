@@ -156,6 +156,8 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
       className={cn(
         'pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-lg backdrop-blur-md',
         'transition-[opacity,transform] duration-[260ms]',
+        // Motion-sensitive users get the fade only — no slide/scale.
+        'motion-reduce:translate-y-0 motion-reduce:scale-100',
         toast.variant === 'success' && 'border-emerald-200/60 dark:border-emerald-900/40',
         toast.variant === 'error' && 'border-destructive/40',
         mounted && !leaving ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-3 opacity-0 scale-[0.96]'

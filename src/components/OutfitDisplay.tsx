@@ -85,7 +85,8 @@ export function OutfitDisplay({
               className={cn(
                 'relative transition-[transform,filter] duration-300',
                 overlap,
-                changed && 'animate-[slide-in-up_320ms_var(--ease-out-strong)_backwards]'
+                changed &&
+                  'animate-[slide-in-up_320ms_var(--ease-out-strong)_backwards] motion-reduce:animate-none'
               )}
               style={{ transitionTimingFunction: 'var(--ease-out-strong)' }}
             >
