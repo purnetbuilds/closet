@@ -242,7 +242,7 @@ export default function TodayPage() {
                 style={{ transitionTimingFunction: 'var(--ease-out-strong)' }}
               >
                 {savingLook ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={16} className="spin-fast" />
                 ) : (
                   <Bookmark size={16} />
                 )}

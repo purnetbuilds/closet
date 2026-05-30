@@ -72,8 +72,9 @@ export function OutfitDisplay({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Silhouette column */}
-      <div className="cascade flex flex-col items-center gap-1.5">
+      {/* Silhouette column — keyed on the item set so a reshuffle/swipe
+          remounts and replays the staggered entrance instead of swapping flat. */}
+      <div key={sorted.map((i) => i.id).join('-')} className="cascade flex flex-col items-center gap-1.5">
         {sorted.map((item, idx) => {
           const locked = lockedIds.has(item.id)
           const changed = changedIds?.has(item.id)

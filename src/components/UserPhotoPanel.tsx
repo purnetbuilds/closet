@@ -69,7 +69,7 @@ export function UserPhotoPanel({ children }: Props) {
         >
           {loading && !photoUrl ? (
             <div className="flex h-full items-center justify-center">
-              <Loader2 size={16} className="animate-spin text-muted-foreground" />
+              <Loader2 size={16} className="spin-fast text-muted-foreground" />
             </div>
           ) : photoUrl ? (
             <>
@@ -80,7 +80,7 @@ export function UserPhotoPanel({ children }: Props) {
               />
               <span className="absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-black/40 to-transparent pb-1 pt-2">
                 {uploading ? (
-                  <Loader2 size={11} className="animate-spin text-white" />
+                  <Loader2 size={11} className="spin-fast text-white" />
                 ) : (
                   <Camera size={11} className="text-white" />
                 )}
@@ -88,7 +88,7 @@ export function UserPhotoPanel({ children }: Props) {
             </>
           ) : (
             <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-              {uploading ? <Loader2 size={18} className="animate-spin" /> : <User size={20} />}
+              {uploading ? <Loader2 size={18} className="spin-fast" /> : <User size={20} />}
             </div>
           )}
         </button>

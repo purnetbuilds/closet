@@ -204,6 +204,14 @@
   animation: shimmer 1.4s linear infinite;
 }
 
+/* Loading spinner — faster than Tailwind's 1s default so loads feel snappier */
+@keyframes spinner-rotate {
+  to { transform: rotate(1turn); }
+}
+.spin-fast {
+  animation: spinner-rotate 0.7s linear infinite;
+}
+
 /* Weather-driven background — applied to Today main.
    The stops are registered as <color> so they actually interpolate; a plain
    `transition: background` can't animate gradients/unregistered custom props,

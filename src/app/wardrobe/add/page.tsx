@@ -183,7 +183,7 @@ export default function AddItemPage() {
         ) : (
           <div className="flex h-48 w-40 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border bg-secondary/50">
             {uploading ? (
-              <Loader2 size={24} className="animate-spin text-muted-foreground" />
+              <Loader2 size={24} className="spin-fast text-muted-foreground" />
             ) : (
               <>
                 <button
@@ -238,7 +238,7 @@ export default function AddItemPage() {
             <div className="flex items-center gap-1.5 text-sm font-medium">
               <Sparkles size={13} className="text-[var(--accent-warm)]" />
               <span>Detected colors</span>
-              {extracting && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
+              {extracting && <Loader2 size={12} className="spin-fast text-muted-foreground" />}
             </div>
             <div className="flex flex-wrap gap-2">
               {extracted.map((hex) => {
@@ -335,7 +335,7 @@ export default function AddItemPage() {
         disabled={!canSave || saving}
         className="press mt-2 flex items-center justify-center gap-2 rounded-xl bg-foreground py-3.5 text-sm font-semibold text-background disabled:opacity-40"
       >
-        {saving && <Loader2 size={16} className="animate-spin" />}
+        {saving && <Loader2 size={16} className="spin-fast" />}
         {saving ? 'Saving…' : 'Save to wardrobe'}
       </button>
     </div>

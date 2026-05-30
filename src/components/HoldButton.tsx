@@ -29,9 +29,12 @@ export function HoldButton({
   const startRef = useRef<number | null>(null)
   const rafRef = useRef<number | null>(null)
   const timeoutsRef = useRef<Set<number>>(new Set())
-  const [progress, setProgress] = useState(0) // 0..1
+  const fillRef = useRef<HTMLDivElement | null>(null)
   const [releasing, setReleasing] = useState(false)
   const confirmedRef = useRef(false)
+
+  // clip-path inset eats from the right; shrinking it reveals the fill L→R.
+  const insetFor = (p: number) => `inset(0 ${(1 - p) * 100}% 0 0 round 12px)`
 
   // Wrapper that remembers timeouts so we can clear them on unmount.
   function later(fn: () => void, ms: number) {
@@ -56,7 +59,8 @@ export function HoldButton({
     if (startRef.current === null) return
     const elapsed = now - startRef.current
     const p = Math.min(1, elapsed / duration)
-    setProgress(p)
+    // Drive the fill imperatively — no per-frame React re-render.
+    if (fillRef.current) fillRef.current.style.clipPath = insetFor(p)
     if (p >= 1) {
       if (!confirmedRef.current) {
         confirmedRef.current = true
@@ -67,7 +71,7 @@ export function HoldButton({
         // hold full state briefly then drop
         later(() => {
           setReleasing(true)
-          setProgress(0)
+          if (fillRef.current) fillRef.current.style.clipPath = insetFor(0)
           later(() => {
             setReleasing(false)
             confirmedRef.current = false
@@ -96,12 +100,9 @@ export function HoldButton({
     startRef.current = null
     if (confirmedRef.current) return
     setReleasing(true)
-    setProgress(0)
+    if (fillRef.current) fillRef.current.style.clipPath = insetFor(0)
     later(() => setReleasing(false), 200)
   }
-
-  // clip-path inset eats from the right; we shrink it to reveal the fill left-to-right
-  const inset = `inset(0 ${(1 - progress) * 100}% 0 0 round 12px)`
 
   return (
     <button
@@ -118,12 +119,13 @@ export function HoldButton({
       )}
     >
       <div
+        ref={fillRef}
         className={cn(
           'pointer-events-none absolute inset-0',
           fillClassName ?? 'bg-emerald-500'
         )}
         style={{
-          clipPath: inset,
+          clipPath: insetFor(0),
           transition: releasing ? 'clip-path 200ms cubic-bezier(0.23, 1, 0.32, 1)' : 'none',
         }}
       />
