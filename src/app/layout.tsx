@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geist.variable} h-full`}>
       <body className="h-full bg-background font-sans antialiased">
-        <main className="mx-auto min-h-full max-w-md pb-20 pt-safe">{children}</main>
+        <main className="mx-auto min-h-full max-w-md pt-safe pb-[calc(5rem+env(safe-area-inset-bottom))]">{children}</main>
         <BottomNav />
         <Toaster />
       </body>

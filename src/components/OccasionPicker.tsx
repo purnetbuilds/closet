@@ -13,7 +13,7 @@ interface Props {
 
 export function OccasionPicker({ selected, onChange }: Props) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+    <div className="flex shrink-0 gap-2 overflow-x-auto pb-1 scrollbar-none">
       {occasions.map((o) => {
         const active = selected === o
         return (

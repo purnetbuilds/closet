@@ -148,10 +148,12 @@ export default function TodayPage() {
       className="weather-bg scrollbar-none flex flex-col gap-5 overflow-y-auto px-4 py-5"
       style={
         {
-          // Fill the space main reserves (pt-safe + pb-20 for the fixed BottomNav)
-          // instead of the full viewport, so the body never overflows and tall
-          // outfits scroll inside the frame rather than clipping the buttons.
-          height: 'calc(100dvh - env(safe-area-inset-top) - 5rem)',
+          // Fill the space main reserves (pt-safe + the BottomNav's reserved
+          // height, which includes the home-indicator inset) instead of the full
+          // viewport, so the body never overflows and tall outfits scroll inside
+          // the frame rather than clipping the buttons against the nav.
+          height:
+            'calc(100dvh - env(safe-area-inset-top) - 5rem - env(safe-area-inset-bottom))',
           '--weather-from': theme.light.from,
           '--weather-via': theme.light.via,
           '--weather-to': theme.light.to,
